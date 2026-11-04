@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes Master Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-slate-900/90 border-r border-slate-800 flex flex-col fixed inset-y-0 z-30">
+        <!-- Brand / Header -->
+        <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-800/80 bg-slate-900/50">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="font-bold text-sm tracking-wide text-white">K8s Dashboard</h1>
+                <p class="text-[10px] text-slate-400 font-medium">Master Controller (Go)</p>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            <button id="tabBtn-overview" onclick="switchTab('overview')"
+                class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium border border-transparent transition text-slate-400 hover:text-slate-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                </svg>
+                <span>Cluster Overview</span>
+            </button>
+
+            <button id="tabBtn-nodes" onclick="switchTab('nodes')"
+                class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium border border-transparent transition text-slate-400 hover:text-slate-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                </svg>
+                <span>Nodes & Master</span>
+            </button>
+
+            <button id="tabBtn-workloads" onclick="switchTab('workloads')"
+                class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium border border-transparent transition text-slate-400 hover:text-slate-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+                <span>Workloads</span>
+            </button>
+
+            <button id="tabBtn-networking" onclick="switchTab('networking')"
+                class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium border border-transparent transition text-slate-400 hover:text-slate-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                </svg>
+                <span>Networking & Ingress</span>
+            </button>
+
+            <button id="tabBtn-storage" onclick="switchTab('storage')"
+                class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium border border-transparent transition text-slate-400 hover:text-slate-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h4"></path>
+                </svg>
+                <span>Storage & Config</span>
+            </button>
+
+            <button id="tabBtn-events" onclick="switchTab('events')"
+                class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium border border-transparent transition text-slate-400 hover:text-slate-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Cluster Events & Audit</span>
+            </button>
+
+            <button id="tabBtn-ai" onclick="switchTab('ai')"
+                class="tab-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium border border-transparent transition text-slate-400 hover:text-slate-200 group">
+                <div class="flex items-center gap-3">
+                    <svg class="w-4 h-4 text-purple-400 group-hover:text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <span>AI Server Copilot</span>
+                </div>
+                <span class="text-[10px] bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold px-1.5 py-0.5 rounded shadow-sm">AI</span>
+            </button>
+
+            <button id="tabBtn-settings" onclick="switchTab('settings')"
+                class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium border border-transparent transition text-slate-400 hover:text-slate-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span>Connection & Config</span>
+            </button>
+        </nav>
+
+        <!-- Footer Info -->
+        <div class="p-4 border-t border-slate-800 text-xs text-slate-500 flex items-center justify-between">
+            <span>Kubernetes v1.x</span>
+            <span class="font-mono text-[10px] bg-slate-800 px-2 py-0.5 rounded text-indigo-400">Go 1.25</span>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="pl-64 flex-1 flex flex-col min-h-screen">
+        <!-- TOP NAVBAR -->
+        <header class="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-20 flex items-center justify-between px-8">
+            <div class="flex items-center gap-4">
+                <!-- Cluster Connection Badge -->
+                <div id="connectionBadge" onclick="switchTab('settings')" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                    <span id="connectionDot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                    <span id="connectionText">Checking cluster...</span>
+                </div>
+
+                <!-- Namespace Dropdown -->
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-slate-400 font-medium">Namespace:</span>
+                    <select id="namespaceSelect" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="">All Namespaces</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Search Input -->
+                <div class="relative">
+                    <input type="text" id="searchInput" placeholder="Filter resources..."
+                        class="w-64 bg-slate-800/80 border border-slate-700/80 text-xs text-slate-200 rounded-lg pl-8 pr-3 py-1.5 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+
+                <!-- Auto Refresh Selector -->
+                <div class="flex items-center gap-1.5 text-xs text-slate-400">
+                    <span>Auto-refresh:</span>
+                    <select id="refreshInterval" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none">
+                        <option value="5">5s</option>
+                        <option value="10" selected>10s</option>
+                        <option value="30">30s</option>
+                        <option value="0">Off</option>
+                    </select>
+                </div>
+
+                <!-- Manual Refresh Button -->
+                <button onclick="refreshActiveTab()" title="Refresh Sekarang" class="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-300 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- DISCONNECT ALERT BANNER -->
+        <div id="disconnectAlert" class="hidden bg-rose-950/60 border-b border-rose-800/80 px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <div class="text-xs">
+                    <span class="font-bold text-rose-300">Cluster Belum Terhubung:</span>
+                    <span id="disconnectErrorMsg" class="text-rose-200 ml-1">Koneksi kubeconfig atau token diperlukan.</span>
+                </div>
+            </div>
+            <button onclick="switchTab('settings')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-semibold shadow transition">
+                Hubungkan Cluster Sekarang
+            </button>
+        </div>
+
+        <!-- MAIN VIEW CONTAINER -->
+        <main class="flex-1 p-8 overflow-y-auto">
+
+            <!-- 1. OVERVIEW TAB -->
+            <section id="section-overview" class="tab-content space-y-6">
+                <!-- Loader -->
+                <div id="overviewLoader" class="hidden text-xs text-indigo-400 font-medium animate-pulse">Memperbarui metrik cluster...</div>
+
+                <!-- Stats Metric Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <!-- Nodes Card -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl shadow-sm">
+                        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+                            <span>Ready Nodes</span>
+                            <span class="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"></path></svg>
+                            </span>
+                        </div>
+                        <div id="statNodes" class="text-2xl font-bold text-white tracking-tight">- / -</div>
+                        <div class="text-[11px] text-slate-400 mt-2">Kapasitas cluster</div>
+                    </div>
+
+                    <!-- Pods Card -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl shadow-sm">
+                        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+                            <span>Total Pods</span>
+                            <span class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                            </span>
+                        </div>
+                        <div id="statPods" class="text-2xl font-bold text-white tracking-tight">-</div>
+                        <div class="flex items-center gap-3 text-[11px] mt-2">
+                            <span id="statPodsRunning" class="text-emerald-400 font-semibold">- Running</span>
+                            <span id="statPodsPending" class="text-amber-400 font-semibold">- Pending</span>
+                        </div>
+                    </div>
+
+                    <!-- Deployments Card -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl shadow-sm">
+                        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+                            <span>Deployments & Svc</span>
+                            <span class="p-1.5 rounded-lg bg-sky-500/10 text-sky-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            </span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="statDeployments" class="text-2xl font-bold text-white tracking-tight">-</span>
+                            <span class="text-xs text-slate-400">deployments</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 mt-2">
+                            <span id="statServices" class="font-semibold text-slate-200">-</span> services aktif
+                        </div>
+                    </div>
+
+                    <!-- Warning Events Card -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl shadow-sm">
+                        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+                            <span>Audit & Warning Events</span>
+                            <span class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            </span>
+                        </div>
+                        <div id="statEvents" class="text-2xl font-bold text-amber-400 tracking-tight">-</div>
+                        <div class="text-[11px] text-slate-400 mt-2">
+                            <span id="statNamespaces" class="text-slate-200 font-semibold">-</span> namespaces termonitor
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cluster Details & Allocation -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <!-- Cluster Connection Info -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5">
+                        <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Master Node Control Plane
+                        </h3>
+                        <div class="space-y-3 text-xs">
+                            <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                                <span class="text-slate-400">Kubernetes Version</span>
+                                <span id="clusterVersion" class="font-mono font-semibold text-indigo-400">-</span>
+                            </div>
+                            <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                                <span class="text-slate-400">API Server URL</span>
+                                <span id="clusterAPIServer" class="font-mono text-slate-300">-</span>
+                            </div>
+                            <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                                <span class="text-slate-400">Metode Koneksi</span>
+                                <span id="clusterConnectedVia" class="text-slate-300">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resource Capacity & Allocatable -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5">
+                        <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            Kapasitas CPU & Memori Cluster
+                        </h3>
+                        <div class="space-y-3 text-xs">
+                            <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                                <span class="text-slate-400">Total CPU Capacity</span>
+                                <span id="clusterCPUCapacity" class="font-mono font-semibold text-slate-200">-</span>
+                            </div>
+                            <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                                <span class="text-slate-400">Allocatable CPU</span>
+                                <span id="clusterCPUAlloc" class="font-mono text-emerald-400">-</span>
+                            </div>
+                            <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                                <span class="text-slate-400">Total Memory Capacity</span>
+                                <span id="clusterMemCapacity" class="font-mono font-semibold text-slate-200">-</span>
+                            </div>
+                            <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                                <span class="text-slate-400">Allocatable Memory</span>
+                                <span id="clusterMemAlloc" class="font-mono text-emerald-400">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. NODES TAB -->
+            <section id="section-nodes" class="tab-content hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-bold text-white">Cluster Nodes & Master</h2>
+                        <p class="text-xs text-slate-400">Daftar node Kubernetes beserta status, kapasitas, dan role.</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama Node</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4">Roles</th>
+                                <th class="py-3 px-4">IP Address</th>
+                                <th class="py-3 px-4">Kapasitas</th>
+                                <th class="py-3 px-4">Versi Kubelet</th>
+                                <th class="py-3 px-4">Umur</th>
+                                <th class="py-3 px-4 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nodesTableBody">
+                            <tr><td colspan="8" class="text-center py-8 text-slate-400">Loading nodes...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 3. WORKLOADS TAB -->
+            <section id="section-workloads" class="tab-content hidden space-y-4">
+                <!-- Subtabs Header -->
+                <div class="flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <button id="subTabBtn-pods" onclick="switchWorkloadSubTab('pods')"
+                        class="workload-subtab-btn border-b-2 border-indigo-500 text-indigo-400 px-3 py-1.5 text-xs font-semibold transition">
+                        Pods
+                    </button>
+                    <button id="subTabBtn-deployments" onclick="switchWorkloadSubTab('deployments')"
+                        class="workload-subtab-btn border-b-2 border-transparent text-slate-400 px-3 py-1.5 text-xs font-semibold transition hover:text-slate-200">
+                        Deployments
+                    </button>
+                    <button id="subTabBtn-daemonsets" onclick="switchWorkloadSubTab('daemonsets')"
+                        class="workload-subtab-btn border-b-2 border-transparent text-slate-400 px-3 py-1.5 text-xs font-semibold transition hover:text-slate-200">
+                        DaemonSets
+                    </button>
+                    <button id="subTabBtn-statefulsets" onclick="switchWorkloadSubTab('statefulsets')"
+                        class="workload-subtab-btn border-b-2 border-transparent text-slate-400 px-3 py-1.5 text-xs font-semibold transition hover:text-slate-200">
+                        StatefulSets
+                    </button>
+                </div>
+
+                <!-- Subtab: Pods -->
+                <div id="workloadContent-pods" class="workload-subtab-content bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama Pod & Node</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4">Ready</th>
+                                <th class="py-3 px-4">Restarts</th>
+                                <th class="py-3 px-4">Umur</th>
+                                <th class="py-3 px-4 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="podsTableBody">
+                            <tr><td colspan="7" class="text-center py-8 text-slate-400">Loading pods...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Subtab: Deployments -->
+                <div id="workloadContent-deployments" class="workload-subtab-content hidden bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama Deployment</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Replicas</th>
+                                <th class="py-3 px-4">Container Images</th>
+                                <th class="py-3 px-4">Umur</th>
+                                <th class="py-3 px-4 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deploymentsTableBody">
+                            <tr><td colspan="6" class="text-center py-8 text-slate-400">Loading deployments...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Subtab: DaemonSets -->
+                <div id="workloadContent-daemonsets" class="workload-subtab-content hidden bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama DaemonSet</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Ready / Desired</th>
+                                <th class="py-3 px-4">Container Images</th>
+                                <th class="py-3 px-4">Umur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daemonsetsTableBody">
+                            <tr><td colspan="5" class="text-center py-8 text-slate-400">Loading daemonsets...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Subtab: StatefulSets -->
+                <div id="workloadContent-statefulsets" class="workload-subtab-content hidden bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama StatefulSet</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Replicas</th>
+                                <th class="py-3 px-4">Container Images</th>
+                                <th class="py-3 px-4">Umur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statefulsetsTableBody">
+                            <tr><td colspan="5" class="text-center py-8 text-slate-400">Loading statefulsets...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. NETWORKING TAB -->
+            <section id="section-networking" class="tab-content hidden space-y-4">
+                <div class="flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <button id="netSubTabBtn-services" onclick="switchNetSubTab('services')"
+                        class="net-subtab-btn border-b-2 border-indigo-500 text-indigo-400 px-3 py-1.5 text-xs font-semibold transition">
+                        Services (SVC)
+                    </button>
+                    <button id="netSubTabBtn-ingresses" onclick="switchNetSubTab('ingresses')"
+                        class="net-subtab-btn border-b-2 border-transparent text-slate-400 px-3 py-1.5 text-xs font-semibold transition hover:text-slate-200">
+                        Ingresses
+                    </button>
+                </div>
+
+                <!-- Services Table -->
+                <div id="netContent-services" class="net-subtab-content bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama Service</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Type</th>
+                                <th class="py-3 px-4">Cluster IP</th>
+                                <th class="py-3 px-4">External IP</th>
+                                <th class="py-3 px-4">Ports</th>
+                                <th class="py-3 px-4">Umur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="servicesTableBody">
+                            <tr><td colspan="7" class="text-center py-8 text-slate-400">Loading services...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Ingresses Table -->
+                <div id="netContent-ingresses" class="net-subtab-content hidden bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama Ingress</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Class</th>
+                                <th class="py-3 px-4">Hosts</th>
+                                <th class="py-3 px-4">Endpoints</th>
+                                <th class="py-3 px-4">Umur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ingressesTableBody">
+                            <tr><td colspan="6" class="text-center py-8 text-slate-400">Loading ingresses...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 5. STORAGE & CONFIG TAB -->
+            <section id="section-storage" class="tab-content hidden space-y-4">
+                <div class="flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <button id="storageSubTabBtn-configmaps" onclick="switchStorageSubTab('configmaps')"
+                        class="storage-subtab-btn border-b-2 border-indigo-500 text-indigo-400 px-3 py-1.5 text-xs font-semibold transition">
+                        ConfigMaps
+                    </button>
+                    <button id="storageSubTabBtn-secrets" onclick="switchStorageSubTab('secrets')"
+                        class="storage-subtab-btn border-b-2 border-transparent text-slate-400 px-3 py-1.5 text-xs font-semibold transition hover:text-slate-200">
+                        Secrets
+                    </button>
+                    <button id="storageSubTabBtn-pv" onclick="switchStorageSubTab('pv')"
+                        class="storage-subtab-btn border-b-2 border-transparent text-slate-400 px-3 py-1.5 text-xs font-semibold transition hover:text-slate-200">
+                        Persistent Volumes (PV)
+                    </button>
+                    <button id="storageSubTabBtn-pvc" onclick="switchStorageSubTab('pvc')"
+                        class="storage-subtab-btn border-b-2 border-transparent text-slate-400 px-3 py-1.5 text-xs font-semibold transition hover:text-slate-200">
+                        Claims (PVC)
+                    </button>
+                </div>
+
+                <!-- ConfigMaps Table -->
+                <div id="storageContent-configmaps" class="storage-subtab-content bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama ConfigMap</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Keys</th>
+                                <th class="py-3 px-4">Umur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="configmapsTableBody">
+                            <tr><td colspan="4" class="text-center py-8 text-slate-400">Loading configmaps...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Secrets Table -->
+                <div id="storageContent-secrets" class="storage-subtab-content hidden bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama Secret</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Type</th>
+                                <th class="py-3 px-4">Data Keys</th>
+                                <th class="py-3 px-4">Umur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="secretsTableBody">
+                            <tr><td colspan="5" class="text-center py-8 text-slate-400">Loading secrets...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PV Table -->
+                <div id="storageContent-pv" class="storage-subtab-content hidden bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama PV</th>
+                                <th class="py-3 px-4">Kapasitas</th>
+                                <th class="py-3 px-4">Access Modes</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4">Storage Class</th>
+                                <th class="py-3 px-4">Umur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pvTableBody">
+                            <tr><td colspan="6" class="text-center py-8 text-slate-400">Loading PVs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PVC Table -->
+                <div id="storageContent-pvc" class="storage-subtab-content hidden bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Nama PVC</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4">Volume</th>
+                                <th class="py-3 px-4">Kapasitas</th>
+                                <th class="py-3 px-4">Umur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pvcTableBody">
+                            <tr><td colspan="6" class="text-center py-8 text-slate-400">Loading PVCs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 6. EVENTS / AUDIT TAB -->
+            <section id="section-events" class="tab-content hidden space-y-4">
+                <div>
+                    <h2 class="text-base font-bold text-white">Cluster Events & Health Audit</h2>
+                    <p class="text-xs text-slate-400">Event terkini cluster secara real-time untuk diagnosa error dan peringatan (Warning).</p>
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                                <th class="py-3 px-4">Type</th>
+                                <th class="py-3 px-4">Reason</th>
+                                <th class="py-3 px-4">Involved Object</th>
+                                <th class="py-3 px-4">Message</th>
+                                <th class="py-3 px-4">Namespace</th>
+                                <th class="py-3 px-4">Umur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventsTableBody">
+                            <tr><td colspan="6" class="text-center py-8 text-slate-400">Loading events...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 7. AI COPILOT TAB -->
+            <section id="section-ai" class="tab-content hidden flex flex-col h-[calc(100vh-8rem)] space-y-4">
+                <!-- AI Header & Settings Bar -->
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-base font-bold text-white flex items-center gap-2">
+                                <span class="p-1 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 text-white">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                </span>
+                                AI Server & K8s Copilot
+                            </h2>
+                            <span id="aiProviderBadge" class="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">
+                                Active: Built-in Engine
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">Asisten cerdas untuk diagnosa error, rekomendasi konfigurasi, dan pembuatan YAML/script server otomatis.</p>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button onclick="openAIConfigModal()" class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium transition">
+                            <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span>Pengaturan AI Key</span>
+                        </button>
+                        <button onclick="clearAIChat()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 rounded-lg text-xs transition" title="Bersihkan Percakapan">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Prompts Pills -->
+                <div class="flex items-center gap-2 overflow-x-auto py-1 text-xs">
+                    <span class="text-slate-500 text-[11px] whitespace-nowrap">Contoh Prompt:</span>
+                    <button onclick="useQuickPrompt('Mengapa node worker saya berstatus NotReady dan bagaimana cara memperbaikinya?')" class="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-purple-500/50 hover:text-purple-300 whitespace-nowrap transition">
+                        🔍 Diagnosa Worker NotReady
+                    </button>
+                    <button onclick="useQuickPrompt('Bagaimana cara integrasi worker baru jika beda lokasi data center (misal Singapura ke Jakarta)?')" class="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-purple-500/50 hover:text-purple-300 whitespace-nowrap transition">
+                        🚀 Join Worker Lintas Data Center
+                    </button>
+                    <button onclick="useQuickPrompt('Buatkan manifest YAML deployment aplikasi Nginx dengan Service NodePort.')" class="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-purple-500/50 hover:text-purple-300 whitespace-nowrap transition">
+                        📦 Buatkan YAML Nginx
+                    </button>
+                    <button onclick="useQuickPrompt('Cek apakah ada warning events atau pod bermasalah di cluster saat ini.')" class="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-purple-500/50 hover:text-purple-300 whitespace-nowrap transition">
+                        ⚠️ Analisis Warning Events
+                    </button>
+                </div>
+
+                <!-- Chat History Container -->
+                <div id="aiChatHistory" class="flex-1 bg-slate-900/60 border border-slate-800 rounded-xl p-5 overflow-y-auto space-y-4">
+                    <!-- Initial Welcome Message from AI -->
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shrink-0 shadow-md">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        </div>
+                        <div class="flex-1 bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none p-4 text-xs text-slate-200 leading-relaxed shadow-sm">
+                            <p class="font-semibold text-purple-400 mb-1">Halo! Saya K8s AI Copilot Anda 🤖</p>
+                            <p>Saya dapat membantu Anda mendiagnosa status cluster, memecahkan error server/worker, membuatkan manifest YAML, dan menyusun perintah <code>kubectl</code> atau bash otomatis.</p>
+                            <p class="mt-2 text-slate-400 text-[11px]">Silakan ketik pertanyaan, paste pesan error terminal Anda, atau pilih salah satu contoh prompt di atas!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Input Form -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 space-y-2">
+                    <div class="flex items-center justify-between text-[11px] text-slate-400 px-1">
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" id="aiAttachContext" checked class="rounded border-slate-700 bg-slate-800 text-purple-600">
+                            <span>Sertakan Status & Warning Cluster Saat Ini (Live Context)</span>
+                        </label>
+                        <span class="text-slate-500">Tekan Shift+Enter untuk baris baru</span>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <textarea id="aiPromptInput" rows="2" placeholder="Ketik pertanyaan atau paste error di sini (misal: 'error saat join worker preflight check...')..."
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none"></textarea>
+                        <button id="aiSendBtn" onclick="sendAIMessage()" class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-semibold shadow-lg shadow-purple-500/20 transition flex items-center gap-2 shrink-0">
+                            <span>Kirim</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. SETTINGS / CONNECTION TAB -->
+            <section id="section-settings" class="tab-content hidden space-y-6">
+                <div>
+                    <h2 class="text-base font-bold text-white">Pengaturan Koneksi Cluster</h2>
+                    <p class="text-xs text-slate-400">Hubungkan dashboard ke master node Kubernetes Anda (lokal atau remote VPS).</p>
+                </div>
+
+                <!-- Current Status Card -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-3 text-xs">
+                    <h3 class="font-semibold text-slate-200">Status Koneksi Saat Ini</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-slate-400">Status:</span>
+                            <span id="settingConnected" class="ml-2 font-semibold text-slate-200">-</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">Versi:</span>
+                            <span id="settingVersion" class="ml-2 font-mono text-indigo-400">-</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">API Server:</span>
+                            <span id="settingAPIServer" class="ml-2 font-mono text-slate-300">-</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">Sumber Kubeconfig:</span>
+                            <span id="settingConnectedVia" class="ml-2 text-slate-300">-</span>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800/80">
+                        <span class="text-slate-400">Pesan / Error:</span>
+                        <span id="settingError" class="ml-2 font-mono text-rose-400">None</span>
+                    </div>
+                </div>
+
+                <!-- Connection Options -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Option A: Paste Kubeconfig YAML -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-indigo-400 mb-1">Opsi 1: Tempel File Kubeconfig</h3>
+                            <p class="text-xs text-slate-400 mb-4">Salin isi file <code>~/.kube/config</code> atau <code>/etc/kubernetes/admin.conf</code> dari VPS Anda.</p>
+                            <textarea id="kubeconfigInput" rows="7" placeholder="apiVersion: v1&#10;clusters:&#10;..."
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea>
+                        </div>
+                        <button onclick="connectCluster('kubeconfig')"
+                            class="mt-4 w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow transition">
+                            Gunakan Kubeconfig Ini
+                        </button>
+                    </div>
+
+                    <!-- Option B: Direct API Server URL + Bearer Token -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-sky-400 mb-1">Opsi 2: Remote API Server & Token</h3>
+                            <p class="text-xs text-slate-400 mb-4">Hubungkan langsung ke Kubernetes API server dengan ServiceAccount Token.</p>
+                            
+                            <div class="space-y-3 text-xs">
+                                <div>
+                                    <label class="block text-slate-400 mb-1">API Server URL</label>
+                                    <input type="text" id="tokenServerInput" placeholder="https://103.172.205.41:6443"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 font-mono text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-400 mb-1">Bearer Token</label>
+                                    <input type="password" id="tokenInput" placeholder="eyJhbGciOiJSUzI1NiIs..."
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 font-mono text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                </div>
+                                <div class="flex items-center gap-2 pt-1">
+                                    <input type="checkbox" id="tokenInsecureCheck" checked class="rounded border-slate-700 bg-slate-800 text-indigo-600">
+                                    <label for="tokenInsecureCheck" class="text-slate-400">Lewati Verifikasi Sertifikat TLS (Insecure Skip TLS)</label>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="connectCluster('token')"
+                            class="mt-4 w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold shadow transition">
+                            Hubungkan via Token
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Option C: Auto Detect Button -->
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-semibold text-slate-200">Auto-Detect Konfigurasi Lokal / In-Cluster</div>
+                        <div class="text-[11px] text-slate-400">Mendeteksi otomatis path standar <code>~/.kube/config</code> atau ServiceAccount pod.</div>
+                    </div>
+                    <button onclick="connectCluster('auto')"
+                        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition">
+                        Deteksi Ulang Otomatis
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: POD LOGS VIEWER -->
+    <div id="logsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+                <div class="flex items-center gap-3">
+                    <span class="w-3 h-3 rounded-full bg-emerald-400 pulse-green"></span>
+                    <h3 id="logPodTitle" class="font-bold text-sm text-white font-mono">Pod Logs</h3>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Container Select -->
+                    <div class="flex items-center gap-1.5 text-xs">
+                        <span class="text-slate-400">Container:</span>
+                        <select id="logContainerSelect" onchange="fetchLogs()" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1">
+                        </select>
+                    </div>
+                    <!-- Tail Lines Select -->
+                    <div class="flex items-center gap-1.5 text-xs">
+                        <span class="text-slate-400">Tail:</span>
+                        <select id="logTailSelect" onchange="fetchLogs()" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1">
+                            <option value="50">50 baris</option>
+                            <option value="100" selected>100 baris</option>
+                            <option value="500">500 baris</option>
+                            <option value="1000">1000 baris</option>
+                        </select>
+                    </div>
+                    <!-- Copy Logs -->
+                    <button onclick="copyLogsToClipboard()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs transition">
+                        Copy
+                    </button>
+                    <!-- Close -->
+                    <button onclick="closeLogsModal()" class="text-slate-400 hover:text-white p-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Terminal Output -->
+            <div class="flex-1 p-5 overflow-auto log-terminal font-mono text-xs select-text" id="logOutput">
+                Memuat log...
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SCALE DEPLOYMENT -->
+    <div id="scaleModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-6 shadow-2xl">
+            <input type="hidden" id="scaleNamespace">
+            <input type="hidden" id="scaleName">
+            <h3 id="scaleDeploymentTitle" class="text-base font-bold text-white mb-2">Scale Deployment</h3>
+            <p class="text-xs text-slate-400 mb-6">Ubah jumlah pod replica untuk deployment ini.</p>
+
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <button onclick="adjustScaleCount(-1)" class="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 text-xl font-bold border border-slate-700 transition">-</button>
+                <input type="number" id="scaleReplicasInput" min="0" max="100" class="w-20 text-center py-2 text-xl font-bold bg-slate-950 border border-slate-800 rounded-lg focus:outline-none">
+                <button onclick="adjustScaleCount(1)" class="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 text-xl font-bold border border-slate-700 transition">+</button>
+            </div>
+
+            <div class="flex items-center justify-end gap-3">
+                <button onclick="closeScaleModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white">Batal</button>
+                <button onclick="submitScaleDeployment()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow transition">Terapkan Perubahan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: AI SETTINGS -->
+    <div id="aiConfigModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-6 shadow-2xl">
+            <h3 class="text-base font-bold text-white mb-1 flex items-center gap-2">
+                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Pengaturan AI Copilot
+            </h3>
+            <p class="text-xs text-slate-400 mb-5">Hubungkan Google Gemini API untuk penalaran AI yang lebih canggih &amp; fleksibel.</p>
+
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Provider</label>
+                    <select id="aiProviderSelect" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200">
+                        <option value="gemini">Google Gemini (Disarankan)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Gemini Model</label>
+                    <input type="text" id="aiModelInput" value="gemini-2.5-flash" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 font-mono text-slate-200">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Gemini API Key</label>
+                    <input type="password" id="aiApiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                    <p class="text-[11px] text-slate-500 mt-1">Kosongkan jika ingin menggunakan mesin diagnosa Kubernetes bawaan (Built-in offline engine).</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 mt-6">
+                <button onclick="closeAIConfigModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white">Batal</button>
+                <button onclick="saveAIConfig()" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold shadow transition">Simpan Pengaturan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="hidden"></div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
+
